@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community Feed Premium</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #a855f7;
+            --bg: #f8fafc;
+            --card: #ffffff;
+        }
+
+        body {
+            background-color: var(--bg);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #1e293b;
+        }
+
+        .main-container { max-width: 700px; margin: 60px auto; padding: 0 20px; }
+
+        /* Эффект матового стекла для формы */
+        .input-section {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 24px;
+            padding: 10px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        }
+
+        .glass-input {
+            border: 2px solid #e2e8f0;
+            border-radius: 18px;
+            padding: 12px 20px;
+            transition: all 0.3s ease;
+        }
+        .glass-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+            outline: none;
+        }
+
+        .btn-send {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            border-radius: 16px;
+            color: white;
+            font-weight: 700;
+            padding: 12px 28px;
+            transition: all 0.3s ease;
+        }
+        .btn-send:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(99, 102, 241, 0.3); }
+
+        /* Карточка комментария */
+        .comment-card {
+            background: var(--card);
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(0,0,0,0.03);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: slideUp 0.5s ease-out;
+        }
+        .comment-card:hover {
+            transform: scale(1.01);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .rating-pill {
+            background: #f1f5f9;
+            border-radius: 20px;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 800;
+        }
+
+        .vote-btn {
+            border: none;
+            background: none;
+            font-size: 1.2rem;
+            transition: 0.2s;
+            cursor: pointer;
+        }
+        .vote-btn:hover { transform: scale(1.3); }
+
+        .best-comment {
+            border: 2px solid #fbbf24;
+            background: linear-gradient(to bottom right, #ffffff, #fffdf2);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .badge-hot { background: #fbbf24; color: #78350f; font-size: 0.75rem; padding: 5px 12px; border-radius: 10px; font-weight: 800; }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <div class="text-center mb-5">
+        <h1 class="fw-bold display-5" style="letter-spacing: -2px;">Лента <span style="color: var(--primary);">Отзывов</span></h1>
+        <p class="text-muted">Ваше мнение формирует наше сообщество</p>
+    </div>
+
+    <div class="mb-4">
+        <input type="text" id="searchInput" class="glass-input w-100" placeholder="🔎 Поиск по сообщениям..." oninput="load()">
+    </div>
+
+    <div class="input-section mb-5">
+        <div class="d-flex gap-2">
+            <input type="text" id="cInput" class="form-control border-0 bg-transparent py-2" placeholder="Напишите что-нибудь доброе...">
+            <button class="btn-send" onclick="send()">Отправить</button>
+        </div>
+    </div>
+
+    <div id="list"></div>
+</div>
+
+<script>
+    async function load() {
+        const query = document.getElementById('searchInput').value;
+        const r = await fetch(`/comments?search=${encodeURIComponent(query)}`);
+        const data = await r.json();
+        const list = document.getElementById('list');
+        list.innerHTML = '';
+
+        if (data.length === 0) {
+            list.innerHTML = '<div class="text-center p-5 opacity-50"><h3>🍃</h3>Тут пока пусто...</div>';
+            return;
+        }
+
+        const maxRating = Math.max(...data.map(o => o.rating), 0);
+
+        data.forEach((c, index) => {
+            const isBest = c.rating === maxRating && maxRating > 0;
+            const date = new Date(c.created_at).toLocaleDateString('ru-RU', {day: 'numeric', month: 'short'});
+
+            list.innerHTML += `
+                <div class="comment-card ${isBest ? 'best-comment' : ''}" style="animation-delay: ${index * 0.1}s">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="flex-grow-1">
+                            <div class="mb-2 d-flex align-items-center gap-2">
+                                <span class="badge bg-light text-muted fw-normal">${date}</span>
+                                ${isBest ? '<span class="badge-hot">ТОП ДНЯ 👑</span>' : ''}
+                                <button class="btn btn-sm text-danger opacity-50 border-0" onclick="del(${c.id})">Удалить</button>
+                            </div>
+                            <div class="h5 fw-bold mb-0">${c.text}</div>
+                        </div>
+                        <div class="rating-pill ms-3">
+                            <button class="vote-btn" onclick="vote(${c.id}, 1)">👍</button>
+                            <span class="${c.rating > 0 ? 'text-success' : (c.rating < 0 ? 'text-danger' : '')}">${c.rating}</span>
+                            <button class="vote-btn" onclick="vote(${c.id}, -1)">👎</button>
+                        </div>
+                    </div>
+                </div>`;
+        });
+    }
+
+    async function send() {
+        const input = document.getElementById('cInput');
+        if(!input.value.trim()) return;
+        await fetch(`/comments?text=${encodeURIComponent(input.value)}`, {method: 'POST'});
+        input.value = '';
+        load();
+    }
+
+    async function vote(id, delta) {
+        await fetch(`/comments/${id}/vote?delta=${delta}`, {method: 'POST'});
+        load();
+    }
+
+    async function del(id) {
+        if(confirm('Удалить этот отзыв?')) {
+            await fetch(`/comments/${id}`, {method: 'DELETE'});
+            load();
+        }
+    }
+
+    load();
+</script>
+</body>
+</html>
